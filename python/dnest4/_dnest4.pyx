@@ -108,7 +108,7 @@ cdef class MPISampler(object):
     self.debug = debug
 
     #tags for MPI communication
-    self.tags = self.enum('READY', 'SET_LEVELS', 'RUN_THREAD')
+    self.tags = self.enum('READY', 'SET_LEVELS', 'RUN_THREAD', 'CLOSE')
 
 
   def enum(self, *sequential, **named):
@@ -205,7 +205,10 @@ cdef class MPISampler(object):
         particle_and_levels = ( self.sampler.particle(part_idx).get_npy_coords(),  result)
 
         self.comm.isend(particle_and_levels, dest=0, tag=status.tag)
-
+      elif tag == self.tags.CLOSE:
+        if self.debug:
+            print("Worker {0} told to quit.".format(self.rank))
+        break
 
   def sample(self,
       model,
@@ -450,6 +453,21 @@ cdef class MPISampler(object):
   #   #Only thing that should matter is the numpy "params" array
   #   particle = sampler.particle(part_idx)
   #   particle.set_coords(params)
+
+  def close(self):
+    """
+    Just send a message off to all the pool members which contains
+    the special :class:`_close_pool_message` sentinel.
+    """
+    if self.is_master():
+        for i in range(self.size):
+            self.comm.isend(None, dest=i + 1, tag=self.tags.CLOSE)
+
+  def __enter__(self):
+      return self
+
+  def __exit__(self, *args):
+      self.close()
 
 
 

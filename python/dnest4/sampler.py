@@ -4,7 +4,7 @@ from .analysis import postprocess
 from .backends import MemoryBackend
 try:
     from ._dnest4 import sample as _sample
-    from ._dnest4 import ben_tester as ben_tester
+    from ._dnest4 import MPISampler
 except ImportError:
     _sample = None
 
@@ -13,7 +13,7 @@ __all__ = ["DNest4Sampler"]
 
 class DNest4Sampler(object):
 
-    def __init__(self, model, backend=None):
+    def __init__(self, model, backend=None, MPISampler=None):
         if _sample is None:
             raise ImportError("You must build the Cython extensions to use "
                               "the Python API")
@@ -22,14 +22,26 @@ class DNest4Sampler(object):
             backend = MemoryBackend()
         self.backend = backend
 
+        self.mpi_sampler = None
+
     def sample(self, max_num_levels, **kwargs):
         self.backend.reset()
-        for sample in _sample(self._model, max_num_levels, **kwargs):
-            self.backend.write_particles(
-                sample["samples"], sample["sample_info"]
-            )
-            self.backend.write_levels(sample["levels"])
-            yield sample
+
+        if self.mpi_sampler is None:
+            for sample in _sample(self._model, max_num_levels, **kwargs):
+                self.backend.write_particles(
+                    sample["samples"], sample["sample_info"]
+                )
+                self.backend.write_levels(sample["levels"])
+                yield sample
+        else:
+            for sample in self.mpi_sampler.sample(self._model, max_num_levels, **kwargs):
+                self.backend.write_particles(
+                    sample["samples"], sample["sample_info"]
+                )
+                self.backend.write_levels(sample["levels"])
+                yield sample
+
 
     def run(self, num_steps, max_num_levels, **kwargs):
         if num_steps <= 0:
