@@ -50,8 +50,5 @@ class DNest4Sampler(object):
         for _ in self.sample(max_num_levels, **kwargs):
             pass
 
-    def ben_test(self,  max_num_levels, **kwargs):
-        ben_tester(self._model, max_num_levels, **kwargs)
-
     def postprocess(self, **kwargs):
         return postprocess(self.backend, **kwargs)
