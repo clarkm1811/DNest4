@@ -4,6 +4,7 @@ from .analysis import postprocess
 from .backends import MemoryBackend
 try:
     from ._dnest4 import sample as _sample
+    from ._dnest4 import ben_tester as ben_tester
 except ImportError:
     _sample = None
 
@@ -36,6 +37,9 @@ class DNest4Sampler(object):
         kwargs["num_steps"] = int(num_steps)
         for _ in self.sample(max_num_levels, **kwargs):
             pass
+
+    def ben_test(self,  max_num_levels, **kwargs):
+        ben_tester(self._model, max_num_levels, **kwargs)
 
     def postprocess(self, **kwargs):
         return postprocess(self.backend, **kwargs)

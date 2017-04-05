@@ -110,6 +110,14 @@ public:
         return c;
     };
 
+    void set_coords (PyObject* rarray) {
+      // Save the output as a C++ vector.
+      size_ = (int)PyArray_DIM(rarray, 0);
+      coords_.resize(size_);
+      double* data = (double*)PyArray_DATA(rarray);
+      for (int i = 0; i < size_; ++i) coords_[i] = data[i];
+    };
+
     // Print to stream
     void print(std::ostream& out) const {
         for (int i = 0; i < size_; ++i) {

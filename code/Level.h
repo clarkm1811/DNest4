@@ -36,6 +36,15 @@ class Level
 		// Specify log_likelihood
 		Level(const LikelihoodType& log_likelihood);
 
+		// Specify everything
+		Level(double like_value, double like_tiebreaker,
+					unsigned int visits,
+					unsigned int exceeds,
+					unsigned int accepts,
+					unsigned int tries,
+					double log_X
+		);
+
 		// Getter for the log_likelihood
 		const LikelihoodType& get_log_likelihood() const
 		{ return log_likelihood; }
@@ -73,4 +82,3 @@ class Level
 } // namespace DNest4
 
 #endif
-

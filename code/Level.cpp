@@ -29,6 +29,22 @@ Level::Level(const LikelihoodType& log_likelihood)
 
 }
 
+Level::Level(double like_value, double like_tiebreaker,
+			unsigned int visits,
+			unsigned int exceeds,
+			unsigned int accepts,
+			unsigned int tries,
+			double log_X)
+:log_likelihood(LikelihoodType(like_value, like_tiebreaker))
+,log_X(log_X)
+,visits(visits)
+,exceeds(exceeds)
+,accepts(accepts)
+,tries(tries)
+{
+
+}
+
 void Level::recalculate_log_X(vector<Level>& levels, double compression,
 												unsigned int regularisation)
 {
@@ -75,4 +91,3 @@ void Level::read(istream& in)
 }
 
 } // namespace DNest4
-

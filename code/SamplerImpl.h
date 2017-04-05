@@ -325,6 +325,44 @@ void Sampler<ModelType>::run_thread(unsigned int thread)
 }
 
 template<class ModelType>
+void Sampler<ModelType>::process_threads(){
+
+	// Count the MCMC steps done
+	count_mcmc_steps += num_threads*options.thread_steps;
+				count_mcmc_steps_since_save += num_threads*options.thread_steps;
+
+	// Go through copies of levels and apply diffs to levels
+	std::vector<Level> levels_orig = levels;
+	for(const auto& _levels: copies_of_levels)
+	{
+		for(size_t i=0; i<levels.size(); ++i)
+		{
+			levels[i].increment_accepts(_levels[i].get_accepts()
+												- levels_orig[i].get_accepts());
+			levels[i].increment_tries(_levels[i].get_tries()
+												- levels_orig[i].get_tries());
+			levels[i].increment_visits(_levels[i].get_visits()
+												- levels_orig[i].get_visits());
+			levels[i].increment_exceeds(_levels[i].get_exceeds()
+												- levels_orig[i].get_exceeds());
+		}
+	}
+
+	// Combine into a single vector
+	for(auto& a: above)
+	{
+		for(const auto& element: a)
+			all_above.push_back(element);
+		a.clear();
+	}
+
+	// Do the bookkeeping
+	do_bookkeeping();
+
+
+}
+
+template<class ModelType>
 void Sampler<ModelType>::increase_max_num_saves(unsigned int increment)
 {
 	options.max_num_saves += increment;
@@ -358,7 +396,7 @@ bool Sampler<ModelType>::enough_levels(const std::vector<Level>& l) const
     }
 
     // Just compare with the value from OPTIONS
-    return (l.size() >= options.max_num_levels);   
+    return (l.size() >= options.max_num_levels);
 }
 
 template<class ModelType>
@@ -617,4 +655,3 @@ void Sampler<ModelType>::read(std::istream& in)
 }
 
 } // namespace DNest4
-

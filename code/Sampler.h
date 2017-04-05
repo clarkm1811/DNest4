@@ -67,9 +67,6 @@ class Sampler
 		// 'thread'
 		void update_level_assignment(unsigned int thread, unsigned int which);
 
-		// Do MCMC for a while on thread 'thread'
-		void mcmc_thread(unsigned int thread);
-
 		// Add new levels, save output files, etc
 		void do_bookkeeping();
 
@@ -79,8 +76,8 @@ class Sampler
 		// Weighting function
 		double log_push(unsigned int which_level) const;
 
-        // Are there enough levels?
-        bool enough_levels(const std::vector<Level>& l) const;
+    // Are there enough levels?
+    bool enough_levels(const std::vector<Level>& l) const;
 
 		// Functions to do with the output files
 		void initialise_output_files() const;
@@ -105,6 +102,11 @@ class Sampler
 		// Launch everything
 		void run();
 
+		// Do MCMC for a while on thread 'thread'
+		void mcmc_thread(unsigned int thread);
+
+		void process_threads();
+
 		// Increase max_num_saves (allows continuation)
 		void increase_max_num_saves(unsigned int increment);
 
@@ -122,6 +124,13 @@ class Sampler
 		ModelType* particle (unsigned int i) { return &(particles[i]); };
 
 		const std::vector<Level>& get_levels () const { return levels; };
+		const std::vector<Level>& get_levels_copy (unsigned int thread ) const { return copies_of_levels[thread]; };
+		void set_levels_copy(const std::vector<Level>& level_vec, unsigned int thread){ copies_of_levels[thread] = level_vec; }
+
+		void set_levels(const std::vector<Level>& level_vec) { levels = level_vec;  };
+
+		//copy levels to copy_of_levels array
+		void copy_levels(unsigned int thread){copies_of_levels[thread] = levels;}
 
 		void print(std::ostream& out) const;
 		void read(std::istream& in);
@@ -135,4 +144,3 @@ std::ostream& operator << (std::ostream& out,
 
 #include "SamplerImpl.h"
 #endif
-
