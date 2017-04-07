@@ -375,7 +375,7 @@ class MPISampler(object):
 
           n_levels = len(level_info["levels"])
           copies_of_levels[i].resize(n_levels)
-          for j in range(n):
+          for j in range(n_levels):
             copies_of_levels[i][j] = Level(level_info["levels"][j]["log_likelihood"], level_info["levels"][j]["tiebreaker"],
                   level_info["levels"][j]["visits"],
                   level_info["levels"][j]["exceeds"],
