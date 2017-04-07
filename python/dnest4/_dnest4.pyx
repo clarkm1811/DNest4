@@ -209,7 +209,7 @@ class MPISampler(object):
         #recreate level vector
         n_levels = len(result["levels"])
         levels.resize(n_levels)
-        for j in range(n):
+        for j in range(n_levels):
           levels[j] = Level(result["levels"][j]["log_likelihood"], result["levels"][j]["tiebreaker"],
                 result["levels"][j]["visits"],
                 result["levels"][j]["exceeds"],
