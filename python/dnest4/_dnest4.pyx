@@ -343,10 +343,27 @@ class MPISampler(object):
     status_dict = read_status(sampler)
     requests = []
     for i in range(self.size):
+        print("Master sending Levels to worker {0}".format(i+1))
         r = self.comm.isend(status_dict, dest=i + 1, tag=self.tags.SET_LEVELS)
         requests.append(r)
 
     MPI.Request.waitall(requests)
+
+    for i in range(n):
+      worker = i+1
+      print("Master knows worker {0} is ready".format(worker))
+      result = self.comm.recv(source=worker, tag=MPI.ANY_TAG)
+
+    #read back all the null responses to free the blocks
+
+    requests = []
+    for j in range(n):
+        print("Master sending to worker {0} with tag {1}"
+            .format(j + 1, self.tags.RUN_THREAD))
+        r = self.comm.isend(j, dest=j + 1, tag=self.tags.RUN_THREAD)
+        requests.append(r)
+
+
 
     i = 0
     while num_steps < 0 or i < num_steps:
@@ -355,14 +372,13 @@ class MPISampler(object):
         requests = []
         for j in range(n):
             print("Master sending to worker {0} with tag {1}"
-                .format(worker, self.tags.RUN_THREAD))
+                .format(j + 1, self.tags.RUN_THREAD))
             r = self.comm.isend(j, dest=j + 1, tag=self.tags.RUN_THREAD)
             requests.append(r)
 
         MPI.Request.waitall(requests)
 
         #re-collect information about levels & particles
-        results = []
         for i in range(n):
           worker = i+1
           if self.debug:
