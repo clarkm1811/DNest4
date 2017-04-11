@@ -198,7 +198,7 @@ class MPISampler(object):
       # Blocking receive to wait for instructions.
       task = self.comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
       if self.debug:
-        print("Worker {0} got task {1} with tag {2}.".format(self.rank, task, status.tag))
+        print("Worker {0} got task with tag {1}.".format(self.rank,  status.tag))
 
       tag = status.Get_tag()
 
@@ -354,6 +354,8 @@ class MPISampler(object):
         #tell each thread to run its own particle
         requests = []
         for j in range(n):
+            print("Master sending to worker {0} with tag {1}"
+                .format(worker, self.tags.RUN_THREAD))
             r = self.comm.isend(j, dest=j + 1, tag=self.tags.RUN_THREAD)
             requests.append(r)
 
