@@ -363,8 +363,6 @@ class MPISampler(object):
         r = self.comm.isend(j, dest=j + 1, tag=self.tags.RUN_THREAD)
         requests.append(r)
 
-
-
     i = 0
     while num_steps < 0 or i < num_steps:
 

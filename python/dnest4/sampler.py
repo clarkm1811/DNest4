@@ -22,7 +22,7 @@ class DNest4Sampler(object):
             backend = MemoryBackend()
         self.backend = backend
 
-        self.mpi_sampler = None
+        self.mpi_sampler = MPISampler
 
     def sample(self, max_num_levels, **kwargs):
         self.backend.reset()
