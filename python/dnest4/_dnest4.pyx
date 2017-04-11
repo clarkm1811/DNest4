@@ -288,8 +288,7 @@ class MPISampler(object):
 
     #everything is set up now if you're a worker, so wait for instructions
     if not self.is_master():
-      self.wait(model, max_num_levels, num_steps=num_steps, num_per_step=num_per_step, new_level_interval=new_level_interval, thread_steps=thread_steps, lam=lam, beta=beta, seed=seed, compression=compression)
-      return
+      raise RuntimeError("Worker node told to sample.")
 
     num_particles = self.size
 
