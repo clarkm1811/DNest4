@@ -204,7 +204,7 @@ class MPISampler(object):
 
       if tag == self.tags.SET_LEVELS:
         #Set level info
-        sampler_status = task
+        reult = task
 
         #recreate level vector
         n_levels = len(result["levels"])
