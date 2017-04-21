@@ -97,7 +97,7 @@ public:
             set_exception(12);
             return -INFINITY;
         }
-
+        Py_DECREF(result);
         return log_like;
     };
 

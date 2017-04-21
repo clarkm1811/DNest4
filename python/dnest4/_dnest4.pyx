@@ -150,7 +150,8 @@ class MPISampler(object):
     if self.is_master():
        raise RuntimeError("Master node told to await jobs.")
 
-    num_particles = self.size
+    num_particles = 1
+    num_threads = self.size
 
     # Check the model.
     if not hasattr(model, "from_prior") or not callable(model.from_prior):
@@ -175,7 +176,7 @@ class MPISampler(object):
 
     # Declarations.
     cdef int i, j, n, error
-    cdef Sampler[PyModel] sampler = Sampler[PyModel](1, compression, options, 0)
+    cdef Sampler[PyModel] sampler = Sampler[PyModel](num_threads, compression, options, 0)
     cdef vector[Level] levels
 
     # Initialize the particles.
@@ -186,6 +187,19 @@ class MPISampler(object):
        error = particle.get_exception()
        if error != 0:
            raise DNest4Error(error)
+
+    # Should I REALLY need to do this?
+    # Initialize the sampler.
+    # if seed is None:
+    #    seed = time.time()
+    # cdef unsigned int seed_ = int(abs(seed))
+    # sampler.initialise(seed_)
+    # n = sampler.size()
+    # for j in range(n):
+    #    particle = sampler.particle(j)
+    #    error = particle.get_exception()
+    #    if error != 0:
+    #        raise DNest4Error(error)
 
     status = MPI.Status()
 
@@ -218,23 +232,36 @@ class MPISampler(object):
                 result["levels"][j]["log_X"])
 
         sampler.set_levels(levels)
-        self.comm.isend(None, dest=0, tag=status.tag)
+        self.comm.send(None, dest=0, tag=status.tag)
 
       elif tag == self.tags.RUN_THREAD:
         #Give the particle the most up to date coords
         particle_coords = task
         part_idx = self.rank-1
         particle = sampler.particle(part_idx)
+
+        if self.debug:
+          print "particle %d setting coords" % self.rank
+
         particle.set_coords(particle_coords)
 
         #run it for thread_steps iterations
         #but don't just use run_thread, cause that does bookkeeping i want to do on the rank0 side
+        if self.debug:
+          print "particle %d (rank %d) copy levels" % (part_idx, self.rank)
+
         sampler.copy_levels(part_idx)
 
         #run mcmc
+        if self.debug:
+          particle = sampler.particle(part_idx)
+          print "particle %d (rank %d) run mcmc\n  coords: %s" % (part_idx, self.rank, str(particle.get_npy_coords() ) )
+
         sampler.mcmc_thread(part_idx)
 
         # Loop over levels and save them.
+        if self.debug:
+          print "particle %d get levels" % self.rank
         levels = sampler.get_levels_copy(part_idx)
         n = levels.size()
 
@@ -260,7 +287,7 @@ class MPISampler(object):
         #return your thread's copy_of_levels and particle info
         particle_and_levels = ( sampler.particle(part_idx).get_npy_coords(),  result)
 
-        self.comm.isend(particle_and_levels, dest=0, tag=status.tag)
+        self.comm.send(particle_and_levels, dest=0, tag=status.tag)
       elif tag == self.tags.CLOSE:
         if self.debug:
             print("Worker {0} told to quit.".format(self.rank))
@@ -290,7 +317,8 @@ class MPISampler(object):
     if not self.is_master():
       raise RuntimeError("Worker node told to sample.")
 
-    num_particles = self.size
+    num_particles = 1
+    num_threads = self.size
 
     # Check the model.
     if not hasattr(model, "from_prior") or not callable(model.from_prior):
@@ -314,9 +342,10 @@ class MPISampler(object):
     )
 
     # Declarations.
-    cdef int i, j, n, error
-    cdef Sampler[PyModel] sampler = Sampler[PyModel](1, compression, options, 0)
+    cdef int i, j, k, n, error
+    cdef Sampler[PyModel] sampler = Sampler[PyModel](num_threads, compression, options, 0)
     cdef vector[vector[Level]] copies_of_levels
+    copies_of_levels.resize(sampler.size())
 
     # Initialize the particles.
     n = sampler.size()
@@ -341,13 +370,9 @@ class MPISampler(object):
 
     #First, distribute out the levels
     status_dict = read_status(sampler)
-    requests = []
     for i in range(self.size):
         print("Master sending Levels to worker {0}".format(i+1))
-        r = self.comm.isend(status_dict, dest=i + 1, tag=self.tags.SET_LEVELS)
-        requests.append(r)
-
-    MPI.Request.waitall(requests)
+        self.comm.send(status_dict, dest=i + 1, tag=self.tags.SET_LEVELS)
 
     for i in range(n):
       worker = i+1
@@ -356,49 +381,48 @@ class MPISampler(object):
 
     #read back all the null responses to free the blocks
 
-    requests = []
-    for j in range(n):
-        print("Master sending to worker {0} with tag {1}"
-            .format(j + 1, self.tags.RUN_THREAD))
-        r = self.comm.isend(j, dest=j + 1, tag=self.tags.RUN_THREAD)
-        requests.append(r)
-
     i = 0
     while num_steps < 0 or i < num_steps:
 
         #tell each thread to run its own particle
-        requests = []
         for j in range(n):
-            print("Master sending to worker {0} with tag {1}"
-                .format(j + 1, self.tags.RUN_THREAD))
-            r = self.comm.isend(j, dest=j + 1, tag=self.tags.RUN_THREAD)
-            requests.append(r)
-
-        MPI.Request.waitall(requests)
+            if self.debug:
+              print("Master sending to worker {0} with tag {1}".format(j + 1, self.tags.RUN_THREAD))
+            particle = sampler.particle(j)
+            self.comm.send(particle.get_npy_coords(), dest=j + 1, tag=self.tags.RUN_THREAD)
 
         #re-collect information about levels & particles
-        for i in range(n):
-          worker = i+1
+        for j in range(n):
+          worker = j+1
           if self.debug:
               print("Master waiting for worker {0} with tag {1}"
-                    .format(worker, i))
+                    .format(worker, j))
           result = self.comm.recv(source=worker, tag=MPI.ANY_TAG)
 
+          if self.debug:
+              print("Setting particle info for particle %d" % j)
+
           ( particle_coords, level_info ) = result
-          particle = sampler.particle(i)
+          particle = sampler.particle(j)
           particle.set_coords(particle_coords)
 
-          n_levels = len(level_info["levels"])
-          copies_of_levels[i].resize(n_levels)
-          for j in range(n_levels):
-            copies_of_levels[i][j] = Level(level_info["levels"][j]["log_likelihood"], level_info["levels"][j]["tiebreaker"],
-                  level_info["levels"][j]["visits"],
-                  level_info["levels"][j]["exceeds"],
-                  level_info["levels"][j]["accepts"],
-                  level_info["levels"][j]["tries"],
-                  level_info["levels"][j]["log_X"])
+          if self.debug:
+              print("Getting level copy info for particle %d" % j)
 
-          sampler.set_levels_copy(copies_of_levels[i], i)
+          n_levels = len(level_info["levels"])
+          copies_of_levels[j].resize(n_levels)
+          for k in range(n_levels):
+            copies_of_levels[j][k] = Level(level_info["levels"][k]["log_likelihood"], level_info["levels"][k]["tiebreaker"],
+                  level_info["levels"][k]["visits"],
+                  level_info["levels"][k]["exceeds"],
+                  level_info["levels"][k]["accepts"],
+                  level_info["levels"][k]["tries"],
+                  level_info["levels"][k]["log_X"])
+
+          if self.debug:
+              print("Master setting copies of levels for particle %d" % i)
+
+          sampler.set_levels_copy(copies_of_levels[j], j)
 
         #now do the usual book-keeping done in run_thread
         sampler.process_threads()
@@ -434,7 +458,7 @@ class MPISampler(object):
     """
     if self.is_master():
         for i in range(self.size):
-            self.comm.isend(None, dest=i + 1, tag=self.tags.CLOSE)
+            self.comm.send(None, dest=i + 1, tag=self.tags.CLOSE)
 
   def __enter__(self):
       return self
