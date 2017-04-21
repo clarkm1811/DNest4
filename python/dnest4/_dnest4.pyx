@@ -317,8 +317,8 @@ class MPISampler(object):
     if not self.is_master():
       raise RuntimeError("Worker node told to sample.")
 
-    num_particles = 1
-    num_threads = self.size
+    num_particles = 1 #particles per thread
+    num_threads = self.size #total number of threads
 
     # Check the model.
     if not hasattr(model, "from_prior") or not callable(model.from_prior):
@@ -368,21 +368,23 @@ class MPISampler(object):
         if error != 0:
             raise DNest4Error(error)
 
-    #First, distribute out the levels
-    status_dict = read_status(sampler)
-    for i in range(self.size):
-        print("Master sending Levels to worker {0}".format(i+1))
-        self.comm.send(status_dict, dest=i + 1, tag=self.tags.SET_LEVELS)
-
-    for i in range(n):
-      worker = i+1
-      print("Master knows worker {0} is ready".format(worker))
-      result = self.comm.recv(source=worker, tag=MPI.ANY_TAG)
-
     #read back all the null responses to free the blocks
 
     i = 0
     while num_steps < 0 or i < num_steps:
+
+        #First, distribute out the levels
+        status_dict = read_status(sampler)
+        for i in range(self.size):
+            if self.debug:
+              print("Master sending Levels to worker {0}".format(i+1))
+            self.comm.send(status_dict, dest=i + 1, tag=self.tags.SET_LEVELS)
+
+        for i in range(n):
+          worker = i+1
+          if self.debug:
+            print("Master knows worker {0} is ready".format(worker))
+          result = self.comm.recv(source=worker, tag=MPI.ANY_TAG)
 
         #tell each thread to run its own particle
         for j in range(n):
