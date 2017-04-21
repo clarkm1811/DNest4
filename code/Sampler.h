@@ -120,6 +120,12 @@ class Sampler
 		const std::vector<unsigned int> get_level_assignments() const
 		{ return level_assignments; }
 
+		const std::vector<LikelihoodType>& get_above(unsigned int thread) const
+		{ return above[thread]; }
+
+		void add_above(double value, double tiebreaker, unsigned int thread){ above[thread].push_back( LikelihoodType(value, tiebreaker) );  };
+		void clear_above() {  			for(auto& a: above){a.clear();}}
+
 		int size () const { return particles.size(); };
 		ModelType* particle (unsigned int i) { return &(particles[i]); };
 

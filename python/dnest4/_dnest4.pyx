@@ -48,6 +48,11 @@ cdef extern from "DNest4.h" namespace "DNest4":
         vector[Level] get_levels()
         vector[unsigned] get_level_assignments()
         vector[LikelihoodType] get_log_likelihoods()
+
+        vector[LikelihoodType] get_above(unsigned int thread)
+        void clear_above()
+        void add_above(double value, double tiebreaker, unsigned int thread)
+
         void set_levels(const vector[Level] level_vec)
         void copy_levels(unsigned int thread)
         vector[Level] get_levels_copy (unsigned int thread )
@@ -178,6 +183,7 @@ class MPISampler(object):
     cdef int i, j, n, error
     cdef Sampler[PyModel] sampler = Sampler[PyModel](num_threads, compression, options, 0)
     cdef vector[Level] levels
+    cdef vector[LikelihoodType] above
 
     # Initialize the particles.
     n = sampler.size()
@@ -240,6 +246,9 @@ class MPISampler(object):
         part_idx = self.rank-1
         particle = sampler.particle(part_idx)
 
+        #clear the above vector
+        sampler.clear_above()
+
         if self.debug:
           print "particle %d setting coords" % self.rank
 
@@ -283,6 +292,14 @@ class MPISampler(object):
             result["levels"][j]["tries"] = level.get_tries()
             result["levels"][j]["exceeds"] = level.get_exceeds()
             result["levels"][j]["visits"] = level.get_visits()
+
+        #and read out the "above" vector for this thread
+        above = sampler.get_above(part_idx)
+        n_above = above.size()
+        result["above"] = np.empty(n_above, dtype=[ ("log_likelihood", np.float64), ("tiebreaker", np.float64) ])
+        for j in range(n_above):
+          result["above"][j]["log_likelihood"] = above[j].get_value()
+          result["above"][j]["tiebreaker"] = above[j].get_tiebreaker()
 
         #return your thread's copy_of_levels and particle info
         particle_and_levels = ( sampler.particle(part_idx).get_npy_coords(),  result)
@@ -380,6 +397,7 @@ class MPISampler(object):
               print("Master sending Levels to worker {0}".format(i+1))
             self.comm.send(status_dict, dest=i + 1, tag=self.tags.SET_LEVELS)
 
+        n = sampler.size()
         for i in range(n):
           worker = i+1
           if self.debug:
@@ -425,6 +443,10 @@ class MPISampler(object):
               print("Master setting copies of levels for particle %d" % i)
 
           sampler.set_levels_copy(copies_of_levels[j], j)
+
+          n_above = len(level_info["above"])
+          for k in range(n_above):
+            sampler.add_above(level_info["above"][k]["log_likelihood"], level_info["above"][k]["tiebreaker"], j)
 
         #now do the usual book-keeping done in run_thread
         sampler.process_threads()
