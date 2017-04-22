@@ -196,6 +196,18 @@ class MPISampler(object):
        if error != 0:
            raise DNest4Error(error)
 
+    # Initialize the sampler.
+    if seed is None:
+       seed = time.time()
+    cdef unsigned int seed_ = int(abs(seed))
+    sampler.initialise(seed_)
+    n = sampler.size()
+    for j in range(n):
+       particle = sampler.particle(j)
+       error = particle.get_exception()
+       if error != 0:
+           raise DNest4Error(error)
+
 
     status = MPI.Status()
 
@@ -351,7 +363,7 @@ class MPISampler(object):
     while num_steps < 0 or i < num_steps:
         #run for num_per_step before saving
         count_mcmc_steps_since_save = 0
-        while count_mcmc_steps_since_save < num_per_step:
+        while True:
           #distribute & tell each thread to run its own particle
           for j in range(n):
               if self.debug:
