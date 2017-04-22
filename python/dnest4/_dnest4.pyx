@@ -363,7 +363,7 @@ class MPISampler(object):
     while num_steps < 0 or i < num_steps:
         #run for num_per_step before saving
         count_mcmc_steps_since_save = 0
-        while True:
+        while count_mcmc_steps_since_save < num_per_step:
           #distribute & tell each thread to run its own particle
           for j in range(n):
               if self.debug:
