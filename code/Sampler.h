@@ -135,6 +135,9 @@ class Sampler
 
 		void set_levels(const std::vector<Level>& level_vec) { levels = level_vec;  };
 
+		void set_level_assignment(unsigned int assignment, unsigned int thread) { level_assignments[thread] = assignment;  };
+		void set_log_likelihood(double value, double tiebreaker, unsigned int thread) { log_likelihoods[thread] =  LikelihoodType(value, tiebreaker);  };
+
 		//copy levels to copy_of_levels array
 		void copy_levels(unsigned int thread){copies_of_levels[thread] = levels;}
 
