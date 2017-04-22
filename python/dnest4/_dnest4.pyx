@@ -235,7 +235,7 @@ class MPISampler(object):
 
         sampler.set_levels(levels)
         sampler.set_level_assignment(  master_status["sample_info"][part_idx]["level_assignment"], part_idx)
-        sampler.set_log_likelihoods(  master_status["sample_info"][part_idx]["log_likelihood"],master_status["sample_info"][part_idx]["tiebreaker"], part_idx)
+        sampler.set_log_likelihood(  master_status["sample_info"][part_idx]["log_likelihood"],master_status["sample_info"][part_idx]["tiebreaker"], part_idx)
 
         #Give the thread's particle the most up to date coords (but we want copies_of_levels, not levels)
 
@@ -261,7 +261,7 @@ class MPISampler(object):
         if self.debug:
           print "particle %d get levels" % self.rank
 
-        particle_status = read_status(sampler, readLevelCopies=True, part_idx=part_idx)
+        particle_status = read_status(sampler, step=0, readLevelCopies=True, part_idx=part_idx)
 
         #also read out the "above" vector for this thread
         above = sampler.get_above(part_idx)
@@ -388,7 +388,7 @@ class MPISampler(object):
 
           #set the level assignment and log_likelihood
           sampler.set_level_assignment(  master_status["sample_info"][j]["level_assignment"], j)
-          sampler.set_log_likelihoods(  master_status["sample_info"][j]["log_likelihood"],master_status["sample_info"][j]["tiebreaker"], j)
+          sampler.set_log_likelihood(  master_status["sample_info"][j]["log_likelihood"],master_status["sample_info"][j]["tiebreaker"], j)
 
           n_levels = len(particle_status["levels"])
           copies_of_levels[j].resize(n_levels)
