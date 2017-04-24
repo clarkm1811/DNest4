@@ -237,6 +237,9 @@ class MPISampler(object):
         #recreate level vector
         n_levels = len(master_status["levels"])
         levels.resize(n_levels)
+        # with open("debug_file.txt", "a") as f:
+        #     f.write("Worker {0} setting {1} levels\n".format(part_idx, n_levels)
+        #     )
         for j in range(n_levels):
           levels[j] = Level(master_status["levels"][j]["log_likelihood"], master_status["levels"][j]["tiebreaker"],
                 master_status["levels"][j]["visits"],
@@ -249,11 +252,21 @@ class MPISampler(object):
         sampler.set_level_assignment(  master_status["sample_info"][part_idx]["level_assignment"], part_idx)
         sampler.set_log_likelihood(  master_status["sample_info"][part_idx]["log_likelihood"],master_status["sample_info"][part_idx]["tiebreaker"], part_idx)
 
+        # with open("debug_file.txt", "a") as f:
+        #     f.write("Worker {0} setting level assignment {1}\n".format(part_idx, master_status["sample_info"][part_idx]["level_assignment"])
+        #     )
+        #     f.write("Worker {0} setting log like {1}\n".format(part_idx, master_status["sample_info"][part_idx]["log_likelihood"])
+        #     )
+
         #Give the thread's particle the most up to date coords (but we want copies_of_levels, not levels)
 
         particle_coords = master_status['samples'][part_idx]
         particle = sampler.particle(part_idx)
         particle.set_coords(particle_coords)
+
+        # with open("debug_file.txt", "a") as f:
+        #     f.write("Worker {0} setting coords {1}\n".format(part_idx, particle_coords)
+        #     )
 
         #run the mcmc
         sampler.copy_levels(part_idx)
@@ -388,8 +401,8 @@ class MPISampler(object):
             particle.set_coords(particle_coords)
 
             #set the level assignment and log_likelihood
-            sampler.set_level_assignment(  master_status["sample_info"][j]["level_assignment"], j)
-            sampler.set_log_likelihood(  master_status["sample_info"][j]["log_likelihood"],master_status["sample_info"][j]["tiebreaker"], j)
+            sampler.set_level_assignment(  particle_status["sample_info"][j]["level_assignment"], j)
+            sampler.set_log_likelihood(  particle_status["sample_info"][j]["log_likelihood"],particle_status["sample_info"][j]["tiebreaker"], j)
 
             n_levels = len(particle_status["levels"])
             copies_of_levels[j].resize(n_levels)
