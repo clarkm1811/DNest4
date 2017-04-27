@@ -23,7 +23,7 @@ and then use it as follows:
 
 .. code-block::
 
-    import dnest
+    import dnest4
 
     # NOTE: the path will default to the current working directory if you
     #       don't give another path.
