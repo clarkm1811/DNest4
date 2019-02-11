@@ -67,17 +67,17 @@ cdef extern from "DNest4.h" namespace "DNest4":
     cdef cppclass Level:
         Level()
         Level(double like_value, double like_tiebreaker,
-              unsigned int visits,
-              unsigned int exceeds,
-              unsigned int accepts,
-              unsigned int tries,
+              unsigned long visits,
+              unsigned long exceeds,
+              unsigned long accepts,
+              unsigned long tries,
               double log_X
         )
         LikelihoodType get_log_likelihood()
-        unsigned int get_visits()
-        unsigned int get_exceeds()
-        unsigned int get_accepts()
-        unsigned int get_tries()
+        unsigned long get_visits()
+        unsigned long get_exceeds()
+        unsigned long get_accepts()
+        unsigned long get_tries()
         double get_log_X()
 
 
@@ -96,7 +96,7 @@ class DNest4Error(Exception):
 
 class MPISampler(object):
 
-  def __init__(self, comm=None, debug=False):
+  def __init__(self, comm=None, debug=True):
 
     global MPI
     try:
@@ -329,8 +329,11 @@ class MPISampler(object):
         raise ValueError("DNest4 models must have a callable 'log_likelihood' method")
 
     # Set up the options.
-    if (num_per_step <= 0 or num_particles <= 0 or new_level_interval <= 0
-            or max_num_levels <= 0 or thread_steps <= 0):
+    if (num_per_step <= 0 
+            or num_particles <= 0 
+            or new_level_interval <= 0
+            or max_num_levels <= 0 
+            or thread_steps <= 0):
         raise ValueError("'num_per_step', 'num_particles', "
                          "'new_level_interval', and "
                          "'max_num_levels' must all be positive")
@@ -371,6 +374,7 @@ class MPISampler(object):
 
     #First, read current sampler status
     master_status = read_status(sampler)
+    print("Master status is {0}".format(master_status))
 
     i = 0
     while num_steps < 0 or i < num_steps:
@@ -490,7 +494,7 @@ cdef read_status(Sampler[PyModel] sampler, step=0, readLevelCopies=False, part_i
       # Convert the sampling results to arrays.
       result["samples"] = np.array(samples)
       result["sample_info"] = np.array(sample_info, dtype=[
-          ("level_assignment", np.uint16),
+          ("level_assignment", np.uint64),
           ("log_likelihood", np.float64),
           ("tiebreaker", np.float64),
       ])
@@ -504,9 +508,9 @@ cdef read_status(Sampler[PyModel] sampler, step=0, readLevelCopies=False, part_i
       n = levels.size()
       result["levels"] = np.empty(n, dtype=[
           ("log_X", np.float64), ("log_likelihood", np.float64),
-          ("tiebreaker", np.float64), ("accepts", np.uint16),
-          ("tries", np.uint16), ("exceeds", np.uint16),
-          ("visits", np.uint16)
+          ("tiebreaker", np.float64), ("accepts", np.uint64),
+          ("tries", np.uint64), ("exceeds", np.uint64),
+          ("visits", np.uint64)
       ])
       for j in range(n):
           level = levels[j]
@@ -582,6 +586,7 @@ def sample(
         The target compression factor. (default: ``np.exp(1)``)
 
     """
+    print("Inside the non-parallel cythonized sampler")
     # Check the model.
     if not hasattr(model, "from_prior") or not callable(model.from_prior):
         raise ValueError("DNest4 models must have a callable 'from_prior' method")
@@ -662,7 +667,7 @@ def sample(
         # Convert the sampling results to arrays.
         result["samples"] = np.array(samples)
         result["sample_info"] = np.array(sample_info, dtype=[
-            ("level_assignment", np.uint16),
+            ("level_assignment", np.uint64),
             ("log_likelihood", np.float64),
             ("tiebreaker", np.float64),
         ])
@@ -672,9 +677,9 @@ def sample(
         n = levels.size()
         result["levels"] = np.empty(n, dtype=[
             ("log_X", np.float64), ("log_likelihood", np.float64),
-            ("tiebreaker", np.float64), ("accepts", np.uint16),
-            ("tries", np.uint16), ("exceeds", np.uint16),
-            ("visits", np.uint16)
+            ("tiebreaker", np.float64), ("accepts", np.uint64),
+            ("tries", np.uint64), ("exceeds", np.uint64),
+            ("visits", np.uint64)
         ])
         for j in range(n):
             level = levels[j]

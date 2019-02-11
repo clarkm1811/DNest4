@@ -23,11 +23,13 @@ class DNest4Sampler(object):
         self.backend = backend
 
         self.mpi_sampler = MPISampler
+        print("DNest4Sampler initialized.")
 
     def sample(self, max_num_levels, **kwargs):
         self.backend.reset()
-
+        print("Inside DNest4Sampler")
         if self.mpi_sampler is None:
+            print("Using the non-MPI sampler")
             for sample in _sample(self._model, max_num_levels, **kwargs):
                 self.backend.write_particles(
                     sample["samples"], sample["sample_info"]
@@ -35,6 +37,7 @@ class DNest4Sampler(object):
                 self.backend.write_levels(sample["levels"])
                 yield sample
         else:
+            print("Using the MPI Sampler")
             for sample in self.mpi_sampler.sample(self._model, max_num_levels, **kwargs):
                 self.backend.write_particles(
                     sample["samples"], sample["sample_info"]
